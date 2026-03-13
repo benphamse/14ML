@@ -1,6 +1,7 @@
 import { ChatGateway } from "@/domain/ports/ChatGateway";
 
-const WS_URL = "ws://localhost:8000/ws/chat";
+const WS_BASE_URL =
+  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
 const RECONNECT_DELAY_MS = 3000;
 
 export class WebSocketChatGateway implements ChatGateway {
@@ -8,8 +9,10 @@ export class WebSocketChatGateway implements ChatGateway {
   private messageHandler: ((data: Record<string, unknown>) => void) | null = null;
   private connectionHandler: ((connected: boolean) => void) | null = null;
   private shouldReconnect = true;
+  private conversationId: string | null = null;
 
-  connect(): void {
+  connect(conversationId: string): void {
+    this.conversationId = conversationId;
     this.shouldReconnect = true;
     this.createConnection();
   }
@@ -35,7 +38,7 @@ export class WebSocketChatGateway implements ChatGateway {
   }
 
   private createConnection(): void {
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(`${WS_BASE_URL}/ws/chat/${this.conversationId}`);
 
     ws.onopen = () => {
       this.connectionHandler?.(true);

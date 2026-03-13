@@ -1,5 +1,5 @@
 export interface ChatGateway {
-  connect(): void;
+  connect(conversationId: string): void;
   disconnect(): void;
   send(message: object): void;
   onMessage(handler: (data: Record<string, unknown>) => void): void;
