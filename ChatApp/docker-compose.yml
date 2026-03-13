@@ -1,0 +1,144 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL (primary relational DB) ──
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    container_name: chatapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-chatapp}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatapp-network
+
+  # ── Redis (caching, sessions, rate limiting) ──
+  redis:
+    build:
+      context: .
+      dockerfile: docker/redis/Dockerfile
+    container_name: chatapp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatapp-network
+
+  # ── MongoDB (NoSQL for analytics, logs, flexible documents) ──
+  mongodb:
+    build:
+      context: .
+      dockerfile: docker/mongodb/Dockerfile
+    container_name: chatapp-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-chatapp}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatapp-network
+
+  # ── Qdrant (vector DB for embeddings / semantic search) ──
+  qdrant:
+    build:
+      context: .
+      dockerfile: docker/qdrant/Dockerfile
+    container_name: chatapp-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatapp-network
+
+  # ── Backend (FastAPI) ──
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: chatapp-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-chatapp}
+      REDIS_URL: redis://redis:6379/0
+      MONGO_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongodb:27017/${MONGO_DB:-chatapp}?authSource=admin
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - chatapp-network
+
+  # ── Frontend (Next.js) ──
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: chatapp-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+      NEXT_PUBLIC_WS_URL: ws://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - chatapp-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongodb_data:
+  qdrant_data:
+
+networks:
+  chatapp-network:
+    driver: bridge
