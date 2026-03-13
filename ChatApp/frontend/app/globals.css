@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-:root {
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
   --bg-primary: #0a0a0a;
   --bg-secondary: #141414;
   --bg-tertiary: #1e1e1e;
@@ -9,12 +11,61 @@
   --accent: #6366f1;
   --accent-hover: #818cf8;
   --border: #262626;
+  --code-bg: #2a2a2a;
+  --pre-bg: #1a1a2e;
+  --scrollbar-thumb: #333;
+  --tool-call-bg: #1a1a2e;
+  --tool-call-border: #2a2a4a;
+  --tool-call-pre-bg: #0d0d1a;
+  --tool-result-bg: #0d1a0d;
+  --tool-result-color: #6ee7b7;
+  --tool-result-border: #1a3a1a;
+  --tool-result-pre-bg: #0a140a;
+  --status-connected-bg: #064e3b;
+  --status-connected-color: #6ee7b7;
+  --status-connected-dot: #34d399;
+  --status-disconnected-bg: #7f1d1d;
+  --status-disconnected-color: #fca5a5;
+  --status-disconnected-dot: #f87171;
+  --loading-dot: #9ca3af;
+  --cursor-color: #9ca3af;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #e8e8e8;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b7280;
+  --accent: #4f46e5;
+  --accent-hover: #6366f1;
+  --border: #d1d5db;
+  --code-bg: #f3f4f6;
+  --pre-bg: #eef2ff;
+  --scrollbar-thumb: #c4c4c4;
+  --tool-call-bg: #eef2ff;
+  --tool-call-border: #c7d2fe;
+  --tool-call-pre-bg: #e0e7ff;
+  --tool-result-bg: #ecfdf5;
+  --tool-result-color: #065f46;
+  --tool-result-border: #a7f3d0;
+  --tool-result-pre-bg: #d1fae5;
+  --status-connected-bg: #d1fae5;
+  --status-connected-color: #065f46;
+  --status-connected-dot: #10b981;
+  --status-disconnected-bg: #fee2e2;
+  --status-disconnected-color: #991b1b;
+  --status-disconnected-dot: #ef4444;
+  --loading-dot: #9ca3af;
+  --cursor-color: #6b7280;
 }
 
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* Scrollbar */
@@ -25,7 +76,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
@@ -41,13 +92,13 @@ body {
   margin-bottom: 0.5em;
 }
 .markdown-body code {
-  background: #2a2a2a;
+  background: var(--code-bg);
   padding: 0.15em 0.4em;
   border-radius: 4px;
   font-size: 0.9em;
 }
 .markdown-body pre {
-  background: #1a1a2e;
+  background: var(--pre-bg);
   padding: 1em;
   border-radius: 8px;
   overflow-x: auto;

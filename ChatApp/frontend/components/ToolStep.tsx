@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ToolStepData } from "@/app/page";
+import { ToolStep as ToolStepEntity } from "@/domain/entities/ToolStep";
 
 interface ToolStepProps {
-  step: ToolStepData;
+  step: ToolStepEntity;
 }
 
 const TOOL_ICONS: Record<string, string> = {
@@ -14,7 +14,7 @@ const TOOL_ICONS: Record<string, string> = {
   create_note: "&#x1f4dd;",
 };
 
-export default function ToolStep({ step }: ToolStepProps) {
+export default function ToolStepComponent({ step }: ToolStepProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (step.type === "tool_call") {
@@ -24,13 +24,13 @@ export default function ToolStep({ step }: ToolStepProps) {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg w-full text-left transition-colors cursor-pointer"
         style={{
-          background: "#1a1a2e",
+          background: "var(--tool-call-bg)",
           color: "var(--accent-hover)",
-          border: "1px solid #2a2a4a",
+          border: "1px solid var(--tool-call-border)",
         }}
       >
         <span dangerouslySetInnerHTML={{ __html: icon }} />
-        <span className="font-medium">Using {step.tool.replace(/_/g, " ")}</span>
+        <span className="font-medium">Using {step.displayName}</span>
         {step.input && Object.keys(step.input).length > 0 && (
           <span style={{ color: "var(--text-secondary)" }} className="truncate">
             {JSON.stringify(step.input).slice(0, 60)}
@@ -42,7 +42,7 @@ export default function ToolStep({ step }: ToolStepProps) {
         {expanded && step.input && (
           <pre
             className="mt-2 p-2 rounded text-xs overflow-x-auto"
-            style={{ background: "#0d0d1a" }}
+            style={{ background: "var(--tool-call-pre-bg)" }}
             onClick={(e) => e.stopPropagation()}
           >
             {JSON.stringify(step.input, null, 2)}
@@ -65,20 +65,20 @@ export default function ToolStep({ step }: ToolStepProps) {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg w-full text-left transition-colors cursor-pointer"
         style={{
-          background: "#0d1a0d",
-          color: "#6ee7b7",
-          border: "1px solid #1a3a1a",
+          background: "var(--tool-result-bg)",
+          color: "var(--tool-result-color)",
+          border: "1px solid var(--tool-result-border)",
         }}
       >
         <span>&#x2705;</span>
-        <span className="font-medium">Result from {step.tool.replace(/_/g, " ")}</span>
+        <span className="font-medium">Result from {step.displayName}</span>
         <span className="ml-auto" style={{ color: "var(--text-secondary)" }}>
           {expanded ? "▲" : "▼"}
         </span>
         {expanded && (
           <pre
             className="mt-2 p-2 rounded text-xs overflow-x-auto w-full"
-            style={{ background: "#0a140a" }}
+            style={{ background: "var(--tool-result-pre-bg)" }}
             onClick={(e) => e.stopPropagation()}
           >
             {typeof parsed === "object" ? JSON.stringify(parsed, null, 2) : String(parsed)}

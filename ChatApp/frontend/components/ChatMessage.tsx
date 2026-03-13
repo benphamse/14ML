@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Message } from "@/app/page";
+import { Message } from "@/domain/entities/Message";
 
 interface ChatMessageProps {
   message: Message;
@@ -34,13 +34,11 @@ export default function ChatMessage({ message, isLoading, isStreaming }: ChatMes
         const target = targetLength.current;
         if (prev >= target) return prev;
         const next = Math.min(prev + CHARS_PER_TICK, target);
-        // Schedule next tick
         rafRef.current = setTimeout(tick, TICK_MS);
         return next;
       });
     };
 
-    // Start ticking if we're behind
     if (displayedLength < message.content.length) {
       if (rafRef.current) clearTimeout(rafRef.current);
       rafRef.current = setTimeout(tick, TICK_MS);
@@ -70,9 +68,9 @@ export default function ChatMessage({ message, isLoading, isStreaming }: ChatMes
       >
         {isLoading && !message.content ? (
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+            <span className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: "0ms", background: "var(--loading-dot)" }} />
+            <span className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: "150ms", background: "var(--loading-dot)" }} />
+            <span className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: "300ms", background: "var(--loading-dot)" }} />
           </div>
         ) : isUser ? (
           <p>{message.content}</p>
@@ -80,7 +78,7 @@ export default function ChatMessage({ message, isLoading, isStreaming }: ChatMes
           <div className="markdown-body">
             <ReactMarkdown>{visibleText}</ReactMarkdown>
             {showCursor && (
-              <span className="inline-block w-2 h-4 ml-0.5 bg-gray-400 animate-pulse" style={{ verticalAlign: "text-bottom" }} />
+              <span className="inline-block w-2 h-4 ml-0.5 animate-pulse" style={{ verticalAlign: "text-bottom", background: "var(--cursor-color)" }} />
             )}
           </div>
         )}
