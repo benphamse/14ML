@@ -21,7 +21,9 @@ export class WebSocketChatGateway implements ChatGateway {
   }
 
   send(message: object): void {
-    this.ws?.send(JSON.stringify(message));
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
   }
 
   onMessage(handler: (data: Record<string, unknown>) => void): void {
