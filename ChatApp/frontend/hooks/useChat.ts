@@ -75,7 +75,22 @@ export function useChat() {
 
     gateway.onConnectionChange(setIsConnected);
     gateway.onMessage(handleMessage);
-    gateway.connect();
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const initConnection = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/conversations?user_id=default`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        gateway.connect(data.id);
+      } catch {
+        // Retry after delay if conversation creation fails
+        setTimeout(initConnection, 3000);
+      }
+    };
+
+    initConnection();
 
     return () => {
       gateway.disconnect();

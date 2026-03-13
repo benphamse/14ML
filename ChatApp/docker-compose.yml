@@ -6,12 +6,14 @@ services:
       dockerfile: docker/postgres/Dockerfile
     container_name: chatapp-postgres
     restart: unless-stopped
+    env_file:
+      - backend/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-chatapp}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
@@ -32,7 +34,7 @@ services:
     container_name: chatapp-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -50,12 +52,14 @@ services:
       dockerfile: docker/mongodb/Dockerfile
     container_name: chatapp-mongodb
     restart: unless-stopped
+    env_file:
+      - backend/.env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin}
       MONGO_INITDB_DATABASE: ${MONGO_DB:-chatapp}
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
     healthcheck:
@@ -74,12 +78,12 @@ services:
     container_name: chatapp-qdrant
     restart: unless-stopped
     ports:
-      - "${QDRANT_HTTP_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      - "6333:6333"
+      - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/localhost/6333' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -94,14 +98,14 @@ services:
     container_name: chatapp-backend
     restart: unless-stopped
     env_file:
-      - .env
+      - backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-chatapp}
       REDIS_URL: redis://redis:6379/0
       MONGO_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongodb:27017/${MONGO_DB:-chatapp}?authSource=admin
       QDRANT_URL: http://qdrant:6333
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,11 +125,10 @@ services:
       dockerfile: docker/frontend/Dockerfile
     container_name: chatapp-frontend
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000
-      NEXT_PUBLIC_WS_URL: ws://backend:8000
+    env_file:
+      - frontend/.env
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "3000:3000"
     depends_on:
       - backend
     networks:

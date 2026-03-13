@@ -1,6 +1,6 @@
 FROM mongo:7-jammy
 
-COPY mongod.conf /etc/mongod.conf
+COPY docker/mongodb/mongod.conf /etc/mongod.conf
 
 EXPOSE 27017
 
