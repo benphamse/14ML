@@ -12,3 +12,4 @@ class Settings:
     model_name: str = os.getenv("MODEL_NAME", "gemini-2.0-flash")
     max_tokens: int = int(os.getenv("MAX_TOKENS", "4096"))
     max_agent_iterations: int = int(os.getenv("MAX_AGENT_ITERATIONS", "10"))
+    database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/chatapp")

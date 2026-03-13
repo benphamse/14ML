@@ -1,0 +1,12 @@
+# Qdrant vector DB config for 100k user scenario
+storage:
+  storage_path: /qdrant/storage
+  optimizers:
+    default_segment_number: 4
+    indexing_threshold_kb: 20000
+
+service:
+  grpc_port: 6334
+  http_port: 6333
+
+log_level: INFO

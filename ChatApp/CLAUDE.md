@@ -31,6 +31,38 @@ Both servers must be running simultaneously. The frontend proxies `/api/backend/
 
 This project follows **SOLID**, **Clean Architecture**, **OOP**, **DDD**, and **DRY** across both frontend and backend.
 
+### Production-Ready for 100k Users
+All code and configuration must be **production-ready for 100,000 concurrent users**. This applies to every layer:
+
+**Backend:**
+- Database queries must use proper indexes — no full table scans. Always add indexes for columns used in WHERE, ORDER BY, and JOIN clauses.
+- Use connection pooling (SQLAlchemy async pool with bounded `pool_size` and `max_overflow`). Never create connections per-request.
+- All I/O operations must be async (`await`). Never block the event loop with synchronous calls.
+- Use pagination for all list endpoints — never return unbounded result sets.
+- Implement proper error handling with structured error responses — no unhandled exceptions leaking to clients.
+- WebSocket connections must handle backpressure and graceful disconnection.
+- Use bulk operations (batch inserts/updates) when processing multiple records.
+- Cache frequently-read, rarely-changed data via Redis.
+- Log with structured logging (JSON) at appropriate levels — no `print()` statements.
+
+**Frontend:**
+- Virtualize long lists (conversations, messages) — never render 10,000+ DOM nodes.
+- Debounce user input that triggers API calls (search, typing indicators).
+- Use optimistic UI updates where safe, with rollback on failure.
+- Lazy-load routes and heavy components. Minimize initial bundle size.
+- Handle loading, error, and empty states for every async operation.
+
+**Infrastructure / Docker:**
+- All services must have health checks, resource limits, and restart policies.
+- Database configs must be tuned for the target scale (connection limits, memory, WAL settings).
+- Use multi-stage Docker builds to minimize image size.
+- Secrets must come from environment variables — never hardcoded.
+
+**General:**
+- No N+1 queries. Use eager loading or batch fetching for related data.
+- Validate and sanitize all external input at system boundaries.
+- Design schemas and APIs for horizontal scalability — stateless services, externalized sessions.
+
 ### API Convention
 - All API response fields use **snake_case** (e.g. `tool_steps`, `current_time`, `created_at`).
 - Frontend models may use camelCase internally but must map to/from snake_case at the API boundary.
@@ -144,5 +176,28 @@ Client sends `{"type": "message", "content": "..."}` or `{"type": "clear"}`. Ser
 - `StepNotifier` port abstracts how tool steps are delivered: `WsStepNotifier` sends over WebSocket, `ListStepNotifier` collects into a list (for the REST endpoint).
 - The frontend connects directly to `ws://localhost:8000/ws/chat` (not proxied through Next.js rewrites, which only cover REST calls).
 
+## Docker Infrastructure
+
+All Docker configuration lives in `docker/` at the project root, with each service in its own subfolder containing a Dockerfile and config files. Orchestrated via `docker-compose.yml` at the project root.
+
+### Services (tuned for 100k users)
+- **PostgreSQL 16** (`docker/postgres/`) — Primary relational DB with custom `postgresql.conf` (200 connections, tuned buffers) and `init.sql` (uuid-ossp, pgcrypto, pg_trgm extensions)
+- **Redis 7** (`docker/redis/`) — Caching, sessions, rate limiting. AOF persistence, 256MB memory with LRU eviction
+- **MongoDB 7** (`docker/mongodb/`) — NoSQL for analytics, logs, flexible documents
+- **Qdrant** (`docker/qdrant/`) — Vector DB for embeddings and semantic search
+- **Backend** (`docker/backend/`) — FastAPI app with 4 uvicorn workers
+- **Frontend** (`docker/frontend/`) — Multi-stage Next.js build (deps → build → standalone runner)
+
+### Commands
+```bash
+docker compose up -d              # start all services
+docker compose up -d postgres redis  # start only infra services (for local dev)
+docker compose down               # stop all
+docker compose logs -f backend    # tail backend logs
+```
+
+### Environment
+Copy `.env.example` at project root and fill in values. The compose file reads from this `.env` for all service credentials and ports.
+
 ## Environment Setup
-Backend requires a `.env` file in `backend/` with at minimum `GEMINI_API_KEY`. See `backend/.env.example`.
+Backend requires a `.env` file in `backend/` with at minimum `GEMINI_API_KEY`. See `backend/.env.example`. For Docker, use the root `.env.example` which includes all service configs.
