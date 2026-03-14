@@ -20,11 +20,13 @@ class AgentServiceImpl(AgentService):
         self._registry = tool_registry
         self._max_iterations = max_iterations
 
-    async def run(self, conversation: Conversation, notifier: StepNotifier) -> str:
+    async def run(
+        self, conversation: Conversation, notifier: StepNotifier, rag_context: str | None = None,
+    ) -> str:
         history = conversation.get_prior_history()
         user_text = conversation.get_last_user_content()
 
-        chat = self._llm.create_chat(history)
+        chat = self._llm.create_chat(history, system_prompt=rag_context)
         full_response, function_calls = await self._llm.stream_message(
             chat, user_text, notifier.notify
         )

@@ -20,6 +20,7 @@ def _to_response(summary) -> ConversationResponse:
         title=summary.title,
         created_at=summary.created_at,
         updated_at=summary.updated_at,
+        project_id=str(summary.project_id) if summary.project_id else None,
     )
 
 
@@ -29,9 +30,10 @@ async def list_conversations(
     user_id: str,
     limit: int = 50,
     offset: int = 0,
+    project_id: UUID | None = None,
 ):
     use_case = request.app.state.list_conversations_use_case
-    conversations = await use_case.execute(user_id, limit, offset)
+    conversations = await use_case.execute(user_id, limit, offset, project_id=project_id)
     return ConversationListResponse(
         conversations=[_to_response(c) for c in conversations]
     )
@@ -45,7 +47,8 @@ async def create_conversation(
 ):
     use_case = request.app.state.create_conversation_use_case
     title = body.title if body and body.title else None
-    summary = await use_case.execute(user_id, title)
+    project_id = UUID(body.project_id) if body and body.project_id else None
+    summary = await use_case.execute(user_id, title, project_id=project_id)
     return _to_response(summary)
 
 

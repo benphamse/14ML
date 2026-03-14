@@ -14,15 +14,19 @@ class ConversationRepository(ConversationRepositoryPort):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
-    async def create_conversation(self, user_id: str, title: str = "New Conversation") -> ConversationSummary:
+    async def create_conversation(
+        self, user_id: str, title: str = "New Conversation", project_id: UUID | None = None,
+    ) -> ConversationSummary:
         async with self._session_factory() as session:
-            conv = ConversationModel(user_id=user_id, title=title)
+            conv = ConversationModel(user_id=user_id, title=title, project_id=project_id)
             session.add(conv)
             await session.commit()
             await session.refresh(conv)
             return self._to_summary(conv)
 
-    async def list_conversations(self, user_id: str, limit: int = 50, offset: int = 0) -> list[ConversationSummary]:
+    async def list_conversations(
+        self, user_id: str, limit: int = 50, offset: int = 0, project_id: UUID | None = None,
+    ) -> list[ConversationSummary]:
         async with self._session_factory() as session:
             stmt = (
                 select(ConversationModel)
@@ -31,6 +35,10 @@ class ConversationRepository(ConversationRepositoryPort):
                 .limit(limit)
                 .offset(offset)
             )
+            if project_id is not None:
+                stmt = stmt.where(ConversationModel.project_id == project_id)
+            else:
+                stmt = stmt.where(ConversationModel.project_id.is_(None))
             result = await session.execute(stmt)
             return [self._to_summary(row) for row in result.scalars().all()]
 
@@ -106,6 +114,7 @@ class ConversationRepository(ConversationRepositoryPort):
             title=conv.title,
             created_at=conv.created_at,
             updated_at=conv.updated_at,
+            project_id=conv.project_id,
         )
 
     @staticmethod

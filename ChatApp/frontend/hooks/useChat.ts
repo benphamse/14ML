@@ -1,22 +1,27 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 import { Conversation } from "@/domain/entities/Conversation";
+import { Message } from "@/domain/entities/Message";
 import { ToolStep } from "@/domain/entities/ToolStep";
 import { SendMessageUseCase } from "@/application/use-cases/SendMessageUseCase";
 import { ClearChatUseCase } from "@/application/use-cases/ClearChatUseCase";
 import { WebSocketChatGateway } from "@/infrastructure/websocket/WebSocketChatGateway";
+import { HttpConversationGateway } from "@/infrastructure/http/HttpConversationGateway";
 import type { WsServerMessage } from "@/application/dto/ws-messages";
 
-export function useChat() {
+export function useChat(conversationId: string | null) {
   const [conversation, setConversation] = useState(new Conversation());
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const gatewayRef = useRef<WebSocketChatGateway | null>(null);
   const sendMessageRef = useRef<SendMessageUseCase | null>(null);
   const clearChatRef = useRef<ClearChatUseCase | null>(null);
+  const httpGatewayRef = useRef(new HttpConversationGateway());
   const pendingToolSteps = useRef<ToolStep[]>([]);
   const streamedContent = useRef("");
+  const activeConversationIdRef = useRef<string | null>(null);
 
   const handleMessage = useCallback((raw: Record<string, unknown>) => {
     const data = raw as unknown as WsServerMessage;
@@ -68,6 +73,41 @@ export function useChat() {
   }, []);
 
   useEffect(() => {
+    if (!conversationId) {
+      setConversation(new Conversation());
+      setIsConnected(false);
+      return;
+    }
+
+    activeConversationIdRef.current = conversationId;
+
+    // Load history
+    setIsHistoryLoading(true);
+    httpGatewayRef.current
+      .getMessages(conversationId)
+      .then((messages) => {
+        if (activeConversationIdRef.current !== conversationId) return;
+        const conv = messages.reduce<Conversation>((c, msg) => {
+          if (msg.role === "user") {
+            return c.addUserMessage(msg.content);
+          }
+          return c.updateLastAssistant((m) =>
+            m.withContent(msg.content).withToolSteps(msg.toolSteps)
+          );
+        }, new Conversation());
+        setConversation(conv);
+      })
+      .catch(() => {
+        if (activeConversationIdRef.current !== conversationId) return;
+        setConversation(new Conversation());
+      })
+      .finally(() => {
+        if (activeConversationIdRef.current === conversationId) {
+          setIsHistoryLoading(false);
+        }
+      });
+
+    // Connect WebSocket
     const gateway = new WebSocketChatGateway();
     gatewayRef.current = gateway;
     sendMessageRef.current = new SendMessageUseCase(gateway);
@@ -75,27 +115,13 @@ export function useChat() {
 
     gateway.onConnectionChange(setIsConnected);
     gateway.onMessage(handleMessage);
-
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const initConnection = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/conversations?user_id=default`, {
-          method: "POST",
-        });
-        const data = await res.json();
-        gateway.connect(data.id);
-      } catch {
-        // Retry after delay if conversation creation fails
-        setTimeout(initConnection, 3000);
-      }
-    };
-
-    initConnection();
+    gateway.connect(conversationId);
 
     return () => {
       gateway.disconnect();
+      gatewayRef.current = null;
     };
-  }, [handleMessage]);
+  }, [conversationId, handleMessage]);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -120,6 +146,7 @@ export function useChat() {
     messages: conversation.messages,
     isLoading,
     isConnected,
+    isHistoryLoading,
     sendMessage,
     clearChat,
   };

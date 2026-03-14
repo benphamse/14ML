@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class CreateConversationRequest(BaseModel):
     title: str | None = None
+    project_id: str | None = None
 
 
 class RenameConversationRequest(BaseModel):
@@ -16,6 +17,7 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    project_id: str | None = None
 
 
 class ConversationListResponse(BaseModel):
