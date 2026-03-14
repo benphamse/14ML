@@ -7,5 +7,7 @@ class RunAgentUseCase:
     def __init__(self, agent_service: AgentService) -> None:
         self._agent_service = agent_service
 
-    async def execute(self, conversation: Conversation, notifier: StepNotifier) -> str:
-        return await self._agent_service.run(conversation, notifier)
+    async def execute(
+        self, conversation: Conversation, notifier: StepNotifier, rag_context: str | None = None,
+    ) -> str:
+        return await self._agent_service.run(conversation, notifier, rag_context=rag_context)

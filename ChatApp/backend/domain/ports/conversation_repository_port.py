@@ -7,10 +7,14 @@ from domain.entities.conversation_summary import ConversationSummary
 
 class ConversationRepositoryPort(ABC):
     @abstractmethod
-    async def create_conversation(self, user_id: str, title: str = "New Conversation") -> ConversationSummary: ...
+    async def create_conversation(
+        self, user_id: str, title: str = "New Conversation", project_id: UUID | None = None,
+    ) -> ConversationSummary: ...
 
     @abstractmethod
-    async def list_conversations(self, user_id: str, limit: int = 50, offset: int = 0) -> list[ConversationSummary]: ...
+    async def list_conversations(
+        self, user_id: str, limit: int = 50, offset: int = 0, project_id: UUID | None = None,
+    ) -> list[ConversationSummary]: ...
 
     @abstractmethod
     async def get_conversation(self, conversation_id: UUID) -> ConversationSummary | None: ...

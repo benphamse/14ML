@@ -4,10 +4,10 @@ from uuid import UUID
 
 
 @dataclass
-class ConversationSummary:
+class Project:
     id: UUID
     user_id: str
-    title: str
+    name: str
+    description: str
     created_at: datetime
     updated_at: datetime
-    project_id: UUID | None = None

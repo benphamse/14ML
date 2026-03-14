@@ -39,11 +39,11 @@ class GeminiLLMService(LLMService):
         self._max_tokens = max_tokens
         self._tool_registry = tool_registry
 
-    def create_chat(self, history: list[dict]) -> Any:
+    def create_chat(self, history: list[dict], system_prompt: str | None = None) -> Any:
         model = genai.GenerativeModel(
             model_name=self._model_name,
             tools=self._tool_registry.get_gemini_tools(),
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=system_prompt or SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(max_output_tokens=self._max_tokens),
         )
         return model.start_chat(history=history)
