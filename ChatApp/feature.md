@@ -2,6 +2,24 @@
 
 ---
 
+## Axios HTTP Client for Frontend Gateways
+
+**Date:** 2026-03-14
+
+### What Changed
+
+- **`frontend/infrastructure/http/apiClient.ts`** *(new)* — Shared axios instance with `baseURL` and default `Content-Type: application/json` header. Single place to configure interceptors, auth headers, or timeouts in the future.
+
+- **`frontend/infrastructure/http/HttpConversationGateway.ts`** — Replaced raw `fetch` + manual `URLSearchParams` + `res.json()` with axios. All methods now use `apiClient.get/post/patch/delete`.
+
+- **`frontend/infrastructure/http/HttpProjectGateway.ts`** — Same refactor.
+
+### Why
+
+Raw `fetch` requires manual `URLSearchParams`, explicit `Content-Type` headers, and separate `res.json()` calls. Axios handles all of this automatically and has 100k+ GitHub stars. Also provides a single place to add interceptors (auth, error handling, logging) without touching every gateway.
+
+---
+
 ## DI Container Refactor (dependency-injector)
 
 **Date:** 2026-03-14

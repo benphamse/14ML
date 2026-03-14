@@ -7,8 +7,7 @@ import type {
   ApiConversationListResponse,
   ApiConversationMessagesResponse,
 } from "@/application/dto/conversation-api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import apiClient from "./apiClient";
 
 export class HttpConversationGateway implements ConversationGateway {
   async listConversations(
@@ -17,14 +16,9 @@ export class HttpConversationGateway implements ConversationGateway {
     offset = 0,
     projectId?: string,
   ): Promise<ConversationSummary[]> {
-    const params = new URLSearchParams({
-      user_id: userId,
-      limit: String(limit),
-      offset: String(offset),
+    const { data } = await apiClient.get<ApiConversationListResponse>("/api/conversations", {
+      params: { user_id: userId, limit, offset, ...(projectId && { project_id: projectId }) },
     });
-    if (projectId) params.set("project_id", projectId);
-    const res = await fetch(`${API_BASE}/api/conversations?${params}`);
-    const data: ApiConversationListResponse = await res.json();
     return data.conversations.map(ConversationSummary.fromServerData);
   }
 
@@ -33,37 +27,24 @@ export class HttpConversationGateway implements ConversationGateway {
     title?: string,
     projectId?: string,
   ): Promise<ConversationSummary> {
-    const params = new URLSearchParams({ user_id: userId });
-    const bodyObj: Record<string, string> = {};
-    if (title) bodyObj.title = title;
-    if (projectId) bodyObj.project_id = projectId;
-    const hasBody = Object.keys(bodyObj).length > 0;
-    const res = await fetch(`${API_BASE}/api/conversations?${params}`, {
-      method: "POST",
-      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
-      body: hasBody ? JSON.stringify(bodyObj) : undefined,
-    });
-    const data: ApiConversationResponse = await res.json();
+    const { data } = await apiClient.post<ApiConversationResponse>(
+      "/api/conversations",
+      { ...(title && { title }), ...(projectId && { project_id: projectId }) },
+      { params: { user_id: userId } },
+    );
     return ConversationSummary.fromServerData(data);
   }
 
   async deleteConversation(id: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/conversations/${id}`, {
-      method: "DELETE",
-    });
-    return res.ok;
+    await apiClient.delete(`/api/conversations/${id}`);
+    return true;
   }
 
-  async renameConversation(
-    id: string,
-    title: string,
-  ): Promise<ConversationSummary> {
-    const res = await fetch(`${API_BASE}/api/conversations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    });
-    const data: ApiConversationResponse = await res.json();
+  async renameConversation(id: string, title: string): Promise<ConversationSummary> {
+    const { data } = await apiClient.patch<ApiConversationResponse>(
+      `/api/conversations/${id}`,
+      { title },
+    );
     return ConversationSummary.fromServerData(data);
   }
 
@@ -72,22 +53,13 @@ export class HttpConversationGateway implements ConversationGateway {
     limit = 100,
     offset = 0,
   ): Promise<Message[]> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    const res = await fetch(
-      `${API_BASE}/api/conversations/${conversationId}/messages?${params}`,
+    const { data } = await apiClient.get<ApiConversationMessagesResponse>(
+      `/api/conversations/${conversationId}/messages`,
+      { params: { limit, offset } },
     );
-    const data: ApiConversationMessagesResponse = await res.json();
     return data.messages.map((m) => {
       const toolSteps = (m.tool_steps ?? []).map(ToolStep.fromServerData);
-      return new Message(
-        m.id,
-        m.role as "user" | "assistant",
-        m.content,
-        toolSteps,
-      );
+      return new Message(m.id, m.role as "user" | "assistant", m.content, toolSteps);
     });
   }
 }
