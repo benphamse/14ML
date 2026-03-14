@@ -20,9 +20,9 @@ from application.use_cases.run_agent import RunAgentUseCase
 from application.use_cases.search_project_memory import SearchProjectMemoryUseCase
 from application.use_cases.update_project import UpdateProjectUseCase
 from infrastructure.config import Settings
-from infrastructure.database.conversation_repository import ConversationRepository
 from infrastructure.database.engine import create_db_engine
-from infrastructure.database.project_repository import ProjectRepository
+from infrastructure.repositories.conversation_repository import ConversationRepository
+from infrastructure.repositories.project_repository import ProjectRepository
 from infrastructure.embedding.gemini_embedding_service import GeminiEmbeddingService
 from infrastructure.llm.gemini_service import GeminiLLMService
 from infrastructure.tools.calculator import CalculatorTool

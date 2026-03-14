@@ -13,7 +13,12 @@ from alembic import context
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv()
 
-from infrastructure.database.models import Base
+from domain.entities.base import Base
+
+# Import all entities so Alembic detects their tables
+from domain.entities.project import Project  # noqa: F401
+from domain.entities.conversation_summary import ConversationSummary  # noqa: F401
+from domain.entities.chat_message import ChatMessage  # noqa: F401
 
 config = context.config
 

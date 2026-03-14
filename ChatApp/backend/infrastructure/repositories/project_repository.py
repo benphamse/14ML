@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from domain.entities.project import Project
 from domain.ports.project_repository_port import ProjectRepositoryPort
-from infrastructure.database.models import ProjectModel
 
 
 class ProjectRepository(ProjectRepositoryPort):
@@ -15,34 +14,33 @@ class ProjectRepository(ProjectRepositoryPort):
 
     async def create_project(self, user_id: str, name: str, description: str = "") -> Project:
         async with self._session_factory() as session:
-            project = ProjectModel(user_id=user_id, name=name, description=description)
+            project = Project(user_id=user_id, name=name, description=description)
             session.add(project)
             await session.commit()
             await session.refresh(project)
-            return self._to_entity(project)
+            return project
 
     async def list_projects(self, user_id: str, limit: int = 50, offset: int = 0) -> list[Project]:
         async with self._session_factory() as session:
             stmt = (
-                select(ProjectModel)
-                .where(ProjectModel.user_id == user_id)
-                .order_by(ProjectModel.updated_at.desc())
+                select(Project)
+                .where(Project.user_id == user_id)
+                .order_by(Project.updated_at.desc())
                 .limit(limit)
                 .offset(offset)
             )
             result = await session.execute(stmt)
-            return [self._to_entity(row) for row in result.scalars().all()]
+            return list(result.scalars().all())
 
     async def get_project(self, project_id: UUID) -> Project | None:
         async with self._session_factory() as session:
-            project = await session.get(ProjectModel, project_id)
-            return self._to_entity(project) if project else None
+            return await session.get(Project, project_id)
 
     async def update_project(
         self, project_id: UUID, name: str | None = None, description: str | None = None,
     ) -> Project | None:
         async with self._session_factory() as session:
-            project = await session.get(ProjectModel, project_id)
+            project = await session.get(Project, project_id)
             if not project:
                 return None
             if name is not None:
@@ -52,22 +50,11 @@ class ProjectRepository(ProjectRepositoryPort):
             project.updated_at = datetime.now(timezone.utc)
             await session.commit()
             await session.refresh(project)
-            return self._to_entity(project)
+            return project
 
     async def delete_project(self, project_id: UUID) -> bool:
         async with self._session_factory() as session:
-            stmt = delete(ProjectModel).where(ProjectModel.id == project_id)
+            stmt = delete(Project).where(Project.id == project_id)
             result = await session.execute(stmt)
             await session.commit()
             return result.rowcount > 0
-
-    @staticmethod
-    def _to_entity(model: ProjectModel) -> Project:
-        return Project(
-            id=model.id,
-            user_id=model.user_id,
-            name=model.name,
-            description=model.description,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
-        )
